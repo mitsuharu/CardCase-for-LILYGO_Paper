@@ -585,8 +585,8 @@ namespace WebTransfer
 
         // 戻り方は機種で変わる。タッチが無い版では画面を叩いても何も起きない。
         const char *guide = Input::hasTouch()
-                                ? "Tap the screen, or hold BOOT, to go back to the list."
-                                : "BOOT: hold = back to the list";
+                                ? "Tap the screen, or hold BTN(IO21), to go back to the list."
+                                : "BTN(IO21): hold = back to the list";
         Screen::drawText(note, guide, Layout::kMargin, Layout::kFooterLine2Baseline);
     }
 

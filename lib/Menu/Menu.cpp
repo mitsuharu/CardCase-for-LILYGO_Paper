@@ -49,9 +49,12 @@ bool Menu::showsPager() const
 
 String Menu::operationGuide() const
 {
-    // ボタンは 1 つしか無いので、短押しと長押しに役割を割り当てている。
+    // 使えるボタンは 1 つしか無いので、短押しと長押しに役割を割り当てている。
     // タッチのある機種でもこの操作は生きているので、常に出す。
-    String guide = "BOOT: tap = next / hold = open";
+    //
+    // BOOT ボタンとは別物なので、そう書かないこと。BOOT (IO0) は e-paper の
+    // ラッチと共用で、押すと表示が乱れる。
+    String guide = "BTN(IO21): tap = next / hold = open";
     if (Input::hasTouch())
     {
         guide = String("Tap a name to open.   ") + guide;

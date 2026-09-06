@@ -37,7 +37,7 @@ void enterDeepSleep()
     Input::end();
     Screen::powerOff();
 
-    // タッチの割り込み線は RTC-IO ではないので、復帰はボタンだけ。
+    // タッチの割り込み線は RTC-IO ではないので、復帰は IO21 のボタンだけ。
     esp_sleep_enable_ext1_wakeup(1ULL << Board::kButton, ESP_EXT1_WAKEUP_ANY_LOW);
 
     log_i("deep sleep start");
@@ -316,7 +316,7 @@ void loop()
         }
         else if (static_cast<long>(millis() - viewingUntil) >= 0)
         {
-            // 電池のためスリープに入る。再び画像を選びたいときはボタンを押す。
+            // 電池のためスリープに入る。再び画像を選びたいときは IO21 のボタンを押す。
             enterDeepSleep();
         }
 

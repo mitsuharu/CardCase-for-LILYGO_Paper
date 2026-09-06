@@ -23,7 +23,7 @@ LILYGO T5 4.7 inch e-Paper（ESP32-S3）向けのアプリ。SD カードに保�
 | Flash / PSRAM | 16MB / 8MB (OPI) | 同左 |
 | 画面 | 4.7 inch ED047TC1 / 960×540 / 16 階調 | 同左 |
 | タッチ | GT911（静電容量式） | **非搭載** |
-| ボタン | BOOT (GPIO21) のみ | 同左 |
+| ボタン | RST / BOOT(IO0) / ユーザー(IO21) の 3 つ。使えるのは IO21 のみ | 同左 |
 | microSD | SPI 配線 | 同左 |
 | RTC | PCF8563 | 同左 |
 
@@ -38,7 +38,20 @@ PlatformIO の env は `T5-ePaper-S3` の 1 つだけ。タッチの有無は起
   呼び出し側は論理座標だけを考えればよい
 - **文字の描画（`writeln` / `write_mode`）は回転に対応していない**。ライブラリがフレーム
   バッファへ直接書くため。だから **UI は常に回転 0（横長）で描く**。回すのは画像だけにしている
-- **ボタンは 1 つしか無い**。「短押しで次へ、長押しで決定」で 1 つに詰め込んである。
+- **基板のボタンは 3 つあるが、アプリが使えるのは IO21 の 1 つだけ**。
+
+  | 基板 | ネット | GPIO | 役割 |
+  | --- | --- | --- | --- |
+  | S5 | CHIP_PU | – | RST（リセット） |
+  | S6 | STR_IO0 | 0 | BOOT（ダウンロードモード） |
+  | S4 | SENSOP_VN | 21 | ユーザーボタン。`Board::kButton` |
+
+  **BOOT (IO0) を「ボタン」と呼ばないこと。** IO0 は e-paper の 74HCT4094（設定用
+  シフトレジスタ）の STR ラッチと共用で、動作中に押すと表示が乱れる。画面に出す案内も
+  `BTN(IO21)` と書いて取り違えを防ぐ。IO21 のネット名が `SENSOP_VN` なのは、ESP32 版で
+  ボタンが SENSOR_VN (GPIO39) にあった名残（回路図 `T5-ePaper-S3-V2.3.pdf` で確認）。
+
+- **使えるボタンが 1 つなので**「短押しで次へ、長押しで決定」で詰め込んである。
   タッチのある H716 でもボタン操作だけで完結できる状態を必ず保つこと
 - **描画の前後で `epd_poweron()` / `epd_poweroff()` が要る**。付けっぱなしはパネルを痛める。
   `Screen::flush()` が対で呼ぶので、EPD の API を直接叩かないこと
@@ -59,7 +72,7 @@ PlatformIO の env は `T5-ePaper-S3` の 1 つだけ。タッチの有無は起
   （[LilyGo-EPD47 の例](https://github.com/Xinyuan-LilyGO/LilyGo-EPD47/blob/master/examples/touch/touch.ino)
   にある通り）
 - **タッチの割り込みピン（GPIO47）は RTC-IO ではない**ので、タッチでのスリープ復帰はできない。
-  復帰はボタン（GPIO21）の ext1 wakeup だけ
+  復帰は IO21 のボタンの ext1 wakeup だけ
 
 ## ディレクトリ構成
 
@@ -204,7 +217,7 @@ USB-JTAG/CDC で、スリープ中は列挙されなくなるため。画像を�
 - 座標変換（`setSwapXY(true)` / `setMirrorXY(false, true)`）は LilyGo の例のままで合っている
 - GT911 の保持されたタッチで、開いた画面がその場で閉じる問題があった。上の
   「対象機種」の注意書きにある `waitingForRelease` で対処済み
-- QR の表示とスマホからの送信は動く。受け取った PNG が表示できなかったのは
+- QR の表示とスマホからの送信、受け取った画像の表示まで動く。PNG が表示できなかったのは
   PNGdec の行バッファの既定値が原因で、`PNG_MAX_BUFFERED_PIXELS` を上げて対処済み
 
 ## リリース

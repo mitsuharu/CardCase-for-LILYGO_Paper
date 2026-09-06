@@ -25,7 +25,18 @@ namespace Board
     constexpr int kI2cScl = BOARD_SCL;   // 17
     constexpr int kTouchInt = TOUCH_INT; // 47
 
-    // ボタンは BOOT の 1 つだけ。押すと Low になる。
+    /**
+     * 自由に使えるボタン（基板の S4、押すと Low）。
+     *
+     * 基板にはボタンが 3 つあるが、使えるのはこれだけ。
+     *   - RST (S5) … CHIP_PU。リセット
+     *   - BOOT (S6) … IO0。ダウンロードモード用。e-paper の 74HCT4094 の
+     *     STR ラッチと共用なので、動作中に押すと表示が乱れる
+     *   - S4 … IO21。これ
+     *
+     * 回路図のネット名は SENSOP_VN だが、ESP32 版でボタンが SENSOR_VN (GPIO39)
+     * にあった名残で、S3 版では IO21 に繋がっている。
+     */
     constexpr int kButton = BUTTON_1; // 21
 
     // 電池電圧の分圧。読むときは 2 倍する。
