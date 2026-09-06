@@ -329,7 +329,14 @@ void loop()
 
     if (mode == Mode::Viewing)
     {
-        if (Input::wasAnyInput())
+        // 戻すのはボタンだけにする。名刺として相手に画面を見せている最中に
+        // 触れられることがあり、タッチで戻すと見せている画像がその場で消える。
+        bool returning = Input::wasButtonInput();
+
+        // 触れられた記録は残さない。次に一覧へ戻ったときの操作として拾われる。
+        Input::discardTouch();
+
+        if (returning)
         {
             returnToMenu();
         }

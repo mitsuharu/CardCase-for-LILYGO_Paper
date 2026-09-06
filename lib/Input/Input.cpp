@@ -244,6 +244,18 @@ namespace Input
         return touchInput || clickInput || longInput;
     }
 
+    bool wasButtonInput()
+    {
+        bool clickInput = wasClicked();
+        bool longInput = wasLongPressed();
+        return clickInput || longInput;
+    }
+
+    void discardTouch()
+    {
+        tapped = false;
+    }
+
     void discardPending()
     {
         tapped = false;
