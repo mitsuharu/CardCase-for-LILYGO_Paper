@@ -4,6 +4,10 @@
 
 [CardCase For M5Paper](https://github.com/mitsuharu/CardCase-For-M5Paper) の LILYGO 版です。機能と操作は揃えていますが、M5Unified / M5GFX が使えないので描画まわりは作り直しています。
 
+## Demo
+
+[![動作デモ動画](README_Images/thumbnail.jpg)](https://www.youtube.com/watch?v=_d_m21GQnnE)
+
 ## 対応機種
 
 | 型番 | タッチ | 画面 | 操作 |
@@ -43,6 +47,9 @@ esptool.py --chip esp32s3 --port /dev/tty.usbmodem1101 write_flash 0x0 T5-ePaper
    - 一覧は**名前順**に並びます。大文字小文字は区別せず、数字は数値として比べるので `card2.png` は `card10.png` より前にきます
    - 一覧に載るのは最大 31 枚です。それを超える場合は名前順で先頭から 31 枚を載せます。1 画面に収まらない場合はページを送ります
 2. SD カードを入れて電源を入れます
+
+   ![一覧の画面](README_Images/menu.jpg)
+
 3. 一覧からファイルを選ぶと全画面で表示します
 4. 選び直すときは、**ユーザーボタン（IO21）**で一覧に戻ります
    - 画像を表示している間はタッチでは戻りません。名刺として相手に見せているときに、触れられて消えてしまわないようにしています
