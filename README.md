@@ -15,6 +15,18 @@
 
 このボードは**パネルが横長（960 × 540）**です。縦長の画像や、縦向きに撮った写真は、画面いっぱいになるよう自動で 90 度回して表示します。本体を横に持ち替えて見てください。
 
+## インストール
+
+[インストーラのページ](https://mitsuharu.github.io/CardCase-for-LILYGO_Paper/) をパソコンの Chrome か Edge で開き、本体を USB-C で繋いでボタンを押すだけで書き込めます。PlatformIO を用意する必要はありません。
+
+**書き込む前に、ユーザーボタン（IO21）を一度押して本体を起こしてください。** ディープスリープ中はシリアルが USB に現れず、デバイスの一覧に出てきません。
+
+コマンドで書き込む場合は、[リリース](https://github.com/mitsuharu/CardCase-for-LILYGO_Paper/releases) の `T5-ePaper-S3-merged.bin` を使います。ブートローダとパーティションを含んでいるので、offset を指定せずそのまま書き込めます。
+
+```bash
+esptool.py --chip esp32s3 --port /dev/tty.usbmodem1101 write_flash 0x0 T5-ePaper-S3-merged.bin
+```
+
 ## Requirements
 
 - 上記のいずれかの基板
@@ -111,6 +123,16 @@ curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installe
 | PNG | 幅 2048px までインタレース無し（デコーダの制限） |
 
 いずれも 16 階調へ落とすときに 4×4 の組織的ディザをかけています。
+
+## リリース
+
+タグ（例: `1.2.3`）を打つと GitHub Actions がファームウェアを作り、Release に添付して、インストーラのページを GitHub Pages へ公開します。Actions の画面から手動でも実行できます。
+
+```bash
+git tag 1.0.0 && git push origin 1.0.0
+```
+
+詳細は [AGENTS.md](AGENTS.md#リリース) を参照してください。初回だけリポジトリ側の設定が要ります。
 
 ## License
 

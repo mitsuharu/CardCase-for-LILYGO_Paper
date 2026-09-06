@@ -1,0 +1,13 @@
+{
+  "name": "CardCase for LILYGO T5 4.7 e-Paper",
+  "version": "0.0.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "T5-ePaper-S3-merged.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
