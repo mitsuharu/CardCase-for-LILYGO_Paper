@@ -38,7 +38,7 @@ void enterDeepSleep()
     Screen::powerOff();
 
     // タッチの割り込み線は RTC-IO ではないので、復帰はボタンだけ。
-    esp_sleep_enable_ext1_wakeup(BIT(Board::kButton), ESP_EXT1_WAKEUP_ANY_LOW);
+    esp_sleep_enable_ext1_wakeup(1ULL << Board::kButton, ESP_EXT1_WAKEUP_ANY_LOW);
 
     log_i("deep sleep start");
     esp_deep_sleep_start();

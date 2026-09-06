@@ -145,7 +145,7 @@ namespace Input
 
         // パネルの向きに合わせる。基板の版で変わることがあるので、
         // 実機で座標がずれたらここだけ直す。
-        touch.setMaxCoordinates(EPD_WIDTH, EPD_HEIGHT);
+        touch.setMaxCoordinates(Layout::kPanelWidth, Layout::kPanelHeight);
         touch.setSwapXY(true);
         touch.setMirrorXY(false, true);
 
