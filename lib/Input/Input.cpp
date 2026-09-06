@@ -20,12 +20,30 @@ namespace
     Input::Point tapPoint;
     unsigned long touchPausedUntil = 0;
 
+    /**
+     * センサーが「触れていない」と答えるまで、タッチを操作として扱わない。
+     *
+     * GT911 はタッチの状態をホストが読み取るまで保持する。画面の全面更新は
+     * 数秒かかり、その間こちらは I2C を読んでいないので、更新が終わって最初に
+     * 読んだときに「その画面を開くために押したタップ」がそのまま返ってくる。
+     * 次の読み取りで離された扱いになり、開いた画面がすぐ閉じてしまう。
+     *
+     * 時間で待っても、保持された状態は消えずに出てくるので防げない。
+     * 一度「触れていない」を見てから受け付けるようにする。指を置いたまま
+     * 画面が切り替わった場合にも同じ理屈で効く。
+     */
+    bool waitingForRelease = false;
+
     // ボタンは Button2 を使わず自前で見る。
     // 短押しと長押しの 2 つしか要らず、状態も押下時刻だけで足りるため。
     bool buttonDown = false;
     unsigned long buttonDownAt = 0;
     bool clicked = false;
     bool longPressed = false;
+
+    // 画面を切り替えた時点でまだ押されているボタンの、離した瞬間を捨てる。
+    // タッチと同じで、開いた画面がその場で閉じてしまうため。
+    bool ignoreNextRelease = false;
 
     // チャタリング除け。機械式の接点なので数 ms 単位で暴れる。
     constexpr unsigned long kDebounceMs = 30;
@@ -50,6 +68,12 @@ namespace
         if (down)
         {
             buttonDownAt = now;
+            return;
+        }
+
+        if (ignoreNextRelease)
+        {
+            ignoreNextRelease = false;
             return;
         }
 
@@ -83,10 +107,23 @@ namespace
 
         if (down)
         {
+            // 画面を切り替えた直後なら、これは前の操作が残っているだけ
+            if (waitingForRelease)
+            {
+                return;
+            }
+
             // 離した位置を使いたいので、触れている間ずっと最後の座標を覚えておく
             tapPoint.x = x;
             tapPoint.y = y;
             touching = true;
+            return;
+        }
+
+        if (waitingForRelease)
+        {
+            // ここで初めて、センサーが空になったことを確かめられた
+            waitingForRelease = false;
             return;
         }
 
@@ -212,6 +249,12 @@ namespace Input
         tapped = false;
         clicked = false;
         longPressed = false;
+
+        // まだ押されたままなら、離した瞬間を次の画面へ持ち越さない
+        if (buttonDown)
+        {
+            ignoreNextRelease = true;
+        }
     }
 
     void pauseTouch(unsigned long durationMs)
@@ -221,6 +264,9 @@ namespace Input
         // 更新の間に触れていた場合、離した扱いにすると誤って選ばれる
         touching = false;
         tapped = false;
+
+        // 保持されたタッチが返ってくるので、空になるのを見てから受け付ける
+        waitingForRelease = true;
     }
 
     void end()
