@@ -81,6 +81,10 @@ pio run -t upload
 
 `platformio.ini` の `default_envs` が `T5-ePaper-S3` なので、env の指定は省略できます。
 
+### 書き込めないとき
+
+ディープスリープに入るとボードが USB から消えます（シリアルがチップ内蔵の USB-JTAG/CDC のため）。画像を出したまま 60 秒放置するとこの状態になります。`Failed to connect to ESP32-S3: No serial data received.` が出たら、RST を押すか USB を挿し直してください。それでも繋がらないときは、**BOOT を押したまま RST を押して離す**とダウンロードモードに入ります。
+
 PlatformIO が入っていない場合は、公式のインストーラで `~/.platformio/penv` を作ります。VS Code の PlatformIO IDE 拡張も同じ場所を使います。
 
 ```bash

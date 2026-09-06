@@ -158,6 +158,27 @@ PLATFORMIO_BUILD_FLAGS="-DCORE_DEBUG_LEVEL=5" ~/.platformio/penv/bin/pio run -t 
 `pio device monitor` は TTY を要求するので、対話端末以外からは使えない。その場合は
 pyserial で直接読む。
 
+### 書き込めないとき
+
+**ディープスリープに入るとボードが USB から消える。** シリアルはチップ内蔵の
+USB-JTAG/CDC で、スリープ中は列挙されなくなるため。画像を出したまま 60 秒放置すると
+この状態になり、`/dev/cu.usbmodem*` がポート一覧から消える。
+
+このとき PlatformIO は**別のポートを掴んで失敗する**。該当するポートが無いと
+「VID:PID を持つ最後のポート」へ落ちる作りで、macOS では `/dev/cu.Bluetooth-Incoming-Port`
+が選ばれる。`Failed to connect to ESP32-S3: No serial data received.` はほぼこれ。
+
+復帰させてから書き込む。
+
+1. RST を押す（または USB を挿し直す）。これで一覧に戻る
+2. それでも繋がらないなら、**BOOT を押したまま RST を押して離す**。ROM の
+   ダウンロードモードに入るので確実に書き込める。書き込み後は RST で再起動する
+
+`boards/T5-ePaper-S3.json` の `hwids` は、LilyGo の配布版が `"0X303A"`（大文字の X）
+になっていて自動判別が効かなかったため `"0x303A"` に直してある。PlatformIO は
+`.replace("0x", "")` で正規化するので、大文字だと `0X303A:1001` のまま残って
+実機の `303A:1001` と一致しない。上流を取り込み直すときは戻さないこと。
+
 ## テスト
 
 - **CI で回すのは native テストのみ**。`Arduino.h` を必要とするコードは CI でビルドはできてもテストはできない
