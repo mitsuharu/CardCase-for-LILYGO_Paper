@@ -410,7 +410,8 @@ namespace ImageDraw
             }
 
             bool ok = false;
-            if (decoder->open(path.c_str(), onPngOpen, onPngClose, onPngRead, onPngSeek, onPngDraw) == PNG_SUCCESS)
+            int opened = decoder->open(path.c_str(), onPngOpen, onPngClose, onPngRead, onPngSeek, onPngDraw);
+            if (opened == PNG_SUCCESS)
             {
                 int divisor = 1;
                 ctx.png = decoder;
@@ -423,7 +424,13 @@ namespace ImageDraw
                     ctx.line = static_cast<uint16_t *>(ps_malloc(sizeof(uint16_t) * ctx.sourceWidth));
                     if (ctx.line != nullptr)
                     {
-                        ok = (decoder->decode(&ctx, 0) == PNG_SUCCESS);
+                        int decoded = decoder->decode(&ctx, 0);
+                        ok = (decoded == PNG_SUCCESS);
+                        if (!ok)
+                        {
+                            log_e("PNG decode failed: %s (error %d, %dx%d)",
+                                  path.c_str(), decoded, ctx.sourceWidth, ctx.sourceHeight);
+                        }
                         free(ctx.line);
                         ctx.line = nullptr;
                     }
@@ -436,7 +443,9 @@ namespace ImageDraw
             }
             else
             {
-                log_w("cannot open PNG: %s", path.c_str());
+                // PNG_TOO_BIG (7) は 1 行がライブラリのバッファに収まらないとき。
+                // platformio.ini の PNG_MAX_BUFFERED_PIXELS を上げる。
+                log_e("cannot open PNG: %s (error %d)", path.c_str(), opened);
             }
 
             delete decoder;
@@ -465,12 +474,16 @@ namespace ImageDraw
             if (prepare(ctx, decoder->getWidth(), decoder->getHeight(), divisor))
             {
                 ok = decodeJpeg(*decoder, ctx, divisor);
+                if (!ok)
+                {
+                    log_e("JPEG decode failed: %s (error %d)", path.c_str(), decoder->getLastError());
+                }
             }
             decoder->close();
         }
         else
         {
-            log_w("cannot decode JPEG: %s", path.c_str());
+            log_e("cannot open JPEG: %s (error %d)", path.c_str(), decoder->getLastError());
         }
 
         file.close();
@@ -500,7 +513,12 @@ namespace ImageDraw
             }
 
             bool ok = false;
-            if (decoder->openRAM(const_cast<uint8_t *>(data), static_cast<int>(size), onPngDraw) == PNG_SUCCESS)
+            int opened = decoder->openRAM(const_cast<uint8_t *>(data), static_cast<int>(size), onPngDraw);
+            if (opened != PNG_SUCCESS)
+            {
+                log_e("cannot open PNG from memory (error %d)", opened);
+            }
+            else
             {
                 int divisor = 1;
                 ctx.png = decoder;
@@ -512,7 +530,12 @@ namespace ImageDraw
                     ctx.line = static_cast<uint16_t *>(ps_malloc(sizeof(uint16_t) * ctx.sourceWidth));
                     if (ctx.line != nullptr)
                     {
-                        ok = (decoder->decode(&ctx, 0) == PNG_SUCCESS);
+                        int decoded = decoder->decode(&ctx, 0);
+                        ok = (decoded == PNG_SUCCESS);
+                        if (!ok)
+                        {
+                            log_e("PNG decode failed from memory (error %d)", decoded);
+                        }
                         free(ctx.line);
                         ctx.line = nullptr;
                     }
@@ -539,7 +562,15 @@ namespace ImageDraw
             {
                 ok = decodeJpeg(*decoder, ctx, divisor);
             }
+            if (!ok)
+            {
+                log_e("JPEG decode failed from memory (error %d)", decoder->getLastError());
+            }
             decoder->close();
+        }
+        else
+        {
+            log_e("cannot open JPEG from memory (error %d)", decoder->getLastError());
         }
 
         delete decoder;
