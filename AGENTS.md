@@ -87,8 +87,8 @@ lib/
   Board/         ピン配置と画面レイアウトの定数
   Screen/        EPD のフレームバッファ。塗り・文字・回転つきのピクセル書き込み
   Storage/       microSD へのアクセス（SPI）
-  ImageFile/     ファイル名の判定、EXIF と画像寸法の解析、表示する向きの決定
-    （ExifOrientation / ImageSize / ImageRotation はすべて純粋ロジック）
+  ImageFile/     ファイル名の判定、EXIF と画像寸法の解析、表示する向きの決定、一覧の並び順
+    （ExifOrientation / ImageSize / ImageRotation / ImageOrder はすべて純粋ロジック）
   ImageDraw/     JPEG / PNG のデコードと、縮小・回転してフレームバッファへ載せる処理
     FitBox/      画面に収める矩形の計算（純粋ロジック）
   Input/         GT911 のタッチと BOOT ボタン
