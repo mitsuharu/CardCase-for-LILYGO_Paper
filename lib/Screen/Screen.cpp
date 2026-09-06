@@ -220,7 +220,7 @@ namespace Screen
         epd_poweroff();
     }
 
-    void flushArea(int x, int y, int w, int h)
+    void flushArea(int x, int y, int w, int h, int clearCycles)
     {
         if (buffer == nullptr || w <= 0 || h <= 0)
         {
@@ -268,14 +268,23 @@ namespace Screen
 
         Rect_t area = {left, top, areaWidth, areaHeight};
 
+        unsigned long startedAt = millis();
+
         epd_poweron();
         // 描き足すだけでは前の絵が残る（白へ戻す操作にならない）ので、
         // 先にこの範囲を白へ振る
-        epd_clear_area(area);
+        if (clearCycles > 0)
+        {
+            epd_clear_area_cycles(area, clearCycles, 50);
+        }
         epd_draw_grayscale_image(area, slice);
         epd_poweroff();
 
         free(slice);
+
+        // 遅さの原因を測れるようにしておく。CORE_DEBUG_LEVEL=4 以上で出る。
+        log_d("flushArea %dx%d cycles=%d took %lu ms",
+              areaWidth, areaHeight, clearCycles, millis() - startedAt);
     }
 
     void powerOff()

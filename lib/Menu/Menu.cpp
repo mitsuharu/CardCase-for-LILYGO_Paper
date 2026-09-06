@@ -11,6 +11,19 @@ namespace
     /// 行の文字を左に少し寄せる（反転したときに文字が枠に接しないように）
     constexpr int kRowPadding = 12;
 
+    /**
+     * カーソルを動かしたときに、前の絵を白へ振る回数。
+     *
+     * 既定の 4 だと 1 行あたり 32 パスかかり、階調の転送 15 パスと合わせて
+     * カーソルが 1 つ動くだけで重い。動く 2 行はまとめて 1 回で出すので、
+     * ここを減らせばそのぶん素直に速くなる。
+     *
+     * 選択行は全面が黒になるため、白へ戻すときに残りやすい。薄く残るようなら
+     * この値を増やす。ページを切り替えるときは文字が総入れ替えになるので、
+     * そちらは既定のままにしてある。
+     */
+    constexpr int kCursorClearCycles = 2;
+
     /// ページ送りボタンのラベル
     const char *kPrevLabel = "< Prev";
     const char *kNextLabel = "Next >";
@@ -166,10 +179,18 @@ void Menu::redrawSelection(int previousIndex)
     drawRow(previousIndex);
     drawRow(_selection.selectedIndex);
 
-    // 動いた 2 行だけを転送する。全面だと 600ms 前後かかり、連打に追いつかない。
-    Screen::flushArea(0, rowTop(previousRow), Layout::kPanelWidth, Layout::kRowHeight);
-    Screen::flushArea(0, rowTop(_selection.rowOf(_selection.selectedIndex)),
-                      Layout::kPanelWidth, Layout::kRowHeight);
+    // 動いた 2 行を 1 回にまとめて転送する。
+    //
+    // 行ごとに出すと、白へ振る処理と階調の転送がそれぞれ 2 回走る。
+    // ボタンで動かす場合は隣り合う行なので、まとめても範囲はほとんど変わらない。
+    // 末尾から先頭へ折り返したときだけ一覧全体になるが、その場合も 1 回で済む。
+    int currentRow = _selection.rowOf(_selection.selectedIndex);
+    int topRow = (previousRow < currentRow) ? previousRow : currentRow;
+    int bottomRow = (previousRow > currentRow) ? previousRow : currentRow;
+
+    Screen::flushArea(0, rowTop(topRow),
+                      Layout::kPanelWidth, (bottomRow - topRow + 1) * Layout::kRowHeight,
+                      kCursorClearCycles);
     Input::pauseTouch();
 }
 

@@ -84,6 +84,9 @@ namespace Screen
      */
     void flush(bool full = false);
 
+    /// 部分転送で前の絵を消すときの既定のサイクル数（epd_clear_area と同じ）
+    constexpr int kDefaultClearCycles = 4;
+
     /**
      * 一部だけを転送する。回転 0 のときだけ使える。
      *
@@ -93,8 +96,13 @@ namespace Screen
      *
      * x と幅は偶数へ丸める。フレームバッファが 1 バイトに 2 画素を
      * 詰めていて、奇数で切ると隣の画素を巻き込むため。
+     *
+     * clearCycles は白へ振る回数。1 サイクルにつき黒 4 パス・白 4 パスが走り、
+     * そのあとの階調の転送が 15 パスなので、ここが所要時間の大半を決める。
+     * 少なくすると速くなるが、前の絵が薄く残りやすくなる。0 を渡すと
+     * 消さずに描き足す（白地に黒を足すだけの場面で使える）。
      */
-    void flushArea(int x, int y, int w, int h);
+    void flushArea(int x, int y, int w, int h, int clearCycles = kDefaultClearCycles);
 
     /// パネルの電源を落とす。スリープや電源断の前に必ず呼ぶ。
     void powerOff();

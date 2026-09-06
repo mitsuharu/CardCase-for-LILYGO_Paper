@@ -55,6 +55,11 @@ PlatformIO の env は `T5-ePaper-S3` の 1 つだけ。タッチの有無は起
   タッチのある H716 でもボタン操作だけで完結できる状態を必ず保つこと
 - **描画の前後で `epd_poweron()` / `epd_poweroff()` が要る**。付けっぱなしはパネルを痛める。
   `Screen::flush()` が対で呼ぶので、EPD の API を直接叩かないこと
+- **遅さの正体は「白へ振る回数」**。`epd_clear_area()` は 4 サイクル、1 サイクルにつき
+  黒 4 パス・白 4 パスなので 32 パス走る。そのあとの `epd_draw_grayscale_image()` は
+  階調ぶんの 15 パス。つまり消す方が倍以上重い。部分更新を速くしたいときは、
+  範囲を狭めるより先に `Screen::flushArea()` のサイクル数を見直す。
+  所要時間は `CORE_DEBUG_LEVEL=4` 以上で `flushArea ... took N ms` として出る
 - **フレームバッファは PSRAM に置く**（259,200 バイト）。内蔵 RAM には入らない
 - **PNGdec は既定だと幅 320px までしか通らない**。`PNG_MAX_BUFFERED_PIXELS` の既定が
   `(320*4+1)*2 = 2562` バイトで、1 行がこれ以上になる PNG は `open()` の時点で
