@@ -1,0 +1,53 @@
+name: PlatformIO CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # CI では native (PC) を対象としたテストを行う。
+  # Arduino.h や EPD 系が必要なテストは実機環境が必要なので、CI ではテストしない（できない）。
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version-file: '.python-version'
+
+    - name: Install PlatformIO
+      run: pip install platformio
+
+    - name: Run PlatformIO native test
+      run: pio test -e native
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version-file: '.python-version'
+
+    - name: Install PlatformIO
+      run: pip install platformio
+
+    - name: Run PlatformIO build
+      run: pio run -e T5-ePaper-S3
+
+    - name: Upload bin-file as artifacts
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: firmware-T5-ePaper-S3
+        path: .pio/build/T5-ePaper-S3/**/*.bin
+        if-no-files-found: error
