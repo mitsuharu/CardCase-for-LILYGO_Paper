@@ -220,6 +220,64 @@ namespace Screen
         epd_poweroff();
     }
 
+    void flushArea(int x, int y, int w, int h)
+    {
+        if (buffer == nullptr || w <= 0 || h <= 0)
+        {
+            return;
+        }
+
+        int left = x & ~1;
+        int right = (x + w + 1) & ~1;
+        if (left < 0)
+        {
+            left = 0;
+        }
+        if (right > EPD_WIDTH)
+        {
+            right = EPD_WIDTH;
+        }
+
+        int top = (y < 0) ? 0 : y;
+        int bottom = (y + h > EPD_HEIGHT) ? EPD_HEIGHT : y + h;
+
+        int areaWidth = right - left;
+        int areaHeight = bottom - top;
+        if (areaWidth <= 0 || areaHeight <= 0)
+        {
+            return;
+        }
+
+        // 転送には範囲ぶんの連続した領域が要る。フレームバッファは画面幅で
+        // 並んでいるので、行ごとに切り出して詰め直す。
+        size_t stride = static_cast<size_t>(areaWidth) / 2;
+        uint8_t *slice = static_cast<uint8_t *>(ps_malloc(stride * areaHeight));
+        if (slice == nullptr)
+        {
+            // 取れないなら全面で出す。遅いが表示は正しい。
+            flush();
+            return;
+        }
+
+        for (int row = 0; row < areaHeight; row++)
+        {
+            memcpy(slice + stride * row,
+                   buffer + static_cast<size_t>(top + row) * (EPD_WIDTH / 2) + left / 2,
+                   stride);
+        }
+
+        Rect_t area = {left, top, areaWidth, areaHeight};
+
+        epd_poweron();
+        // 描き足すだけでは前の絵が残る（白へ戻す操作にならない）ので、
+        // 先にこの範囲を白へ振る
+        epd_clear_area(area);
+        epd_draw_grayscale_image(area, slice);
+        epd_poweroff();
+
+        free(slice);
+    }
+
     void powerOff()
     {
         epd_poweroff_all();
