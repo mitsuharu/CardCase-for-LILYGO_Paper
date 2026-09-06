@@ -10,6 +10,14 @@ namespace ImageFile
             return 0;
         }
 
+        // 正方形はどちらの向きに回しても収まり方が変わらない。
+        // 「横長ではない＝縦長」と決めつけると、横長のパネル（このボードは 960×540）で
+        // 正方形の画像が必ず 90 度回り、中身だけが横倒しになる。
+        if (imageWidth == imageHeight || screenWidth == screenHeight)
+        {
+            return 0;
+        }
+
         bool imageIsLandscape = imageWidth > imageHeight;
         bool screenIsLandscape = screenWidth > screenHeight;
 
