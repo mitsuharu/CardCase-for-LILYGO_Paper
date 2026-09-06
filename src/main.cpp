@@ -5,6 +5,7 @@
 #include <Input.h>
 #include <Storage.h>
 #include <ImageFile.h>
+#include <ImageOrder.h>
 #include <ImageDraw.h>
 #include <Menu.h>
 #include <WebTransfer.h>
@@ -23,6 +24,11 @@ enum class Mode
 Menu menu;
 Mode mode = Mode::Browsing;
 unsigned long viewingUntil = 0;
+
+// 画像の名前を名前順に並べておく場所。
+// 一覧の先頭は [WiFi] が占めるので、画像に使えるのはそのぶん少ない。
+constexpr int kMaxImages = Menu::kMaxItems - 1;
+String imageNames[kMaxImages];
 
 // 画像を受け取ると SD の中身が変わるので、一覧を作り直す必要がある
 bool imageListStale = false;
@@ -181,7 +187,15 @@ void onSelectItem(const MenuItem &item)
     showImage(item.value);
 }
 
-/// SD を走査して画像ファイルを一覧に積む
+/**
+ * SD を走査して画像ファイルを一覧に積む。
+ *
+ * `openNextFile()` は FAT に登録された順（おおむね書き込んだ順）で返してくるので、
+ * そのまま積むとカードに入れた順に並ぶ。名前順へ入れ替えてから積む。
+ *
+ * 名前は SortedNames が順番を保って持つ。上限を超えたぶんはそこで捨てられるので、
+ * 全部を読んでから並べ替えて切るのに比べて、覚えておく数が一覧に載る数を超えない。
+ */
 void collectImages()
 {
     File root = Storage::fs().open("/");
@@ -190,24 +204,29 @@ void collectImages()
         return;
     }
 
+    ImageFile::SortedNames names(imageNames, kMaxImages);
+
     File file = root.openNextFile();
     while (file)
     {
         if (!file.isDirectory())
         {
             String filename = file.name();
-            if (ImageFile::isListable(filename) &&
-                !menu.addItem(MenuItemKind::Image, filename, ImageFile::rootPath(filename)))
+            if (ImageFile::isListable(filename))
             {
-                // 一覧の上限に達した
-                file.close();
-                break;
+                names.insert(filename);
             }
         }
         file.close();
         file = root.openNextFile();
     }
     root.close();
+
+    for (int i = 0; i < names.count(); i++)
+    {
+        const String &filename = names.at(i);
+        menu.addItem(MenuItemKind::Image, filename, ImageFile::rootPath(filename));
+    }
 }
 
 /**
