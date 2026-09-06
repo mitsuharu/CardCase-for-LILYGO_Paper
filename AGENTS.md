@@ -106,19 +106,33 @@ using String = std::string;
 
 ## ビルドと書き込み
 
+PlatformIO CLI は `~/.platformio/penv/bin/pio` にある。PATH は通っていないので、
+フルパスで叩くか、エイリアスを張ってから使うこと。
+
 ```bash
-# テスト（実機不要）
-pio test -e native
-
-# ビルド
-pio run
-
-# 書き込みとログ
-pio run -t upload
-pio device monitor
+alias pio=~/.platformio/penv/bin/pio
 ```
 
-`default_envs` は `T5-ePaper-S3`。
+```bash
+# テスト（実機不要）
+~/.platformio/penv/bin/pio test -e native
+
+# ビルド
+~/.platformio/penv/bin/pio run
+
+# 書き込みとログ
+~/.platformio/penv/bin/pio run -t upload
+~/.platformio/penv/bin/pio device monitor
+```
+
+`default_envs` は `T5-ePaper-S3`。env の指定は省略できる。
+
+`penv` が無い場合は入っていないので、公式のインストーラで作る。VS Code の
+PlatformIO IDE 拡張も同じ場所を使う。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py && python3 get-platformio.py
+```
 
 ### 実機のログを見る
 
@@ -126,7 +140,7 @@ pio device monitor
 詳しく見たいときだけレベルを上げる。
 
 ```bash
-PLATFORMIO_BUILD_FLAGS="-DCORE_DEBUG_LEVEL=5" pio run -t upload
+PLATFORMIO_BUILD_FLAGS="-DCORE_DEBUG_LEVEL=5" ~/.platformio/penv/bin/pio run -t upload
 ```
 
 `pio device monitor` は TTY を要求するので、対話端末以外からは使えない。その場合は
@@ -135,6 +149,7 @@ pyserial で直接読む。
 ## テスト
 
 - **CI で回すのは native テストのみ**。`Arduino.h` を必要とするコードは CI でビルドはできてもテストはできない
+- CI では `pip install platformio` で入れているので PATH が通る。手元とはコマンドの書き方が変わる
 - テストは `test/<スイート名>/` に置く。各ファイルが `main()` を持つため、`test/` 直下に複数のファイルを並べるとリンクに失敗する
 
 実機でしか確認できないこと（描画結果、タッチ、スリープ復帰、SD の読み書き、WiFi の受信）は

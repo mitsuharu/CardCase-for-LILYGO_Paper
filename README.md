@@ -62,6 +62,12 @@ SD カードを抜き差ししなくても、スマホから直接画像を送�
 
 ## Build
 
+PlatformIO CLI は `~/.platformio/penv/bin/pio` にあります。PATH は通っていないので、フルパスで叩くか、エイリアスを張ってください。
+
+```bash
+alias pio=~/.platformio/penv/bin/pio
+```
+
 ```bash
 # テスト（実機不要）
 pio test -e native
@@ -74,6 +80,12 @@ pio run -t upload
 ```
 
 `platformio.ini` の `default_envs` が `T5-ePaper-S3` なので、env の指定は省略できます。
+
+PlatformIO が入っていない場合は、公式のインストーラで `~/.platformio/penv` を作ります。VS Code の PlatformIO IDE 拡張も同じ場所を使います。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py && python3 get-platformio.py
+```
 
 開発のルールと、ハードウェア由来の注意点は [AGENTS.md](AGENTS.md) にまとめてあります。
 
