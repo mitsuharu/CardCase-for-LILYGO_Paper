@@ -1,0 +1,198 @@
+name: Release
+
+# タグを打つか、Actions の画面から手動で実行する。
+# タグ名はバージョンそのもの（例: 1.2.3）。
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'バージョン（例: 1.2.3）'
+        required: true
+        type: string
+      prerelease:
+        description: 'プレリリースとして公開する'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  # ファームウェアを作る。
+  # 単体の firmware.bin に加えて、書き込み先を意識しなくてよい統合バイナリも作る。
+  #
+  # 対応する基板は H716 / H578 / H580 の 3 つあるが、タッチの有無は実行時に
+  # 判定するので成果物は 1 つで足りる。
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version-file: '.python-version'
+
+    - name: Install PlatformIO
+      run: pip install platformio
+
+    - name: Build firmware
+      run: pio run -e T5-ePaper-S3
+
+    # bootloader / partitions / boot_app0 / firmware を 1 つにまとめる。
+    # これがあれば offset を指定せずに 0x0 へ書き込むだけで済む。
+    # ESP32-S3 なのでブートローダは 0x0（ESP32 は 0x1000 で、そこが違う）。
+    - name: Merge firmware
+      run: |
+        BUILD=".pio/build/T5-ePaper-S3"
+        BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
+        mkdir -p dist
+        python "$HOME/.platformio/packages/tool-esptoolpy/esptool.py" \
+          --chip esp32s3 merge_bin \
+          -o "dist/T5-ePaper-S3-merged.bin" \
+          --flash_mode keep --flash_freq keep --flash_size 16MB \
+          0x0 "$BUILD/bootloader.bin" \
+          0x8000 "$BUILD/partitions.bin" \
+          0xe000 "$BOOT_APP0" \
+          0x10000 "$BUILD/firmware.bin"
+        cp "$BUILD/firmware.bin" "dist/T5-ePaper-S3-firmware.bin"
+
+    - name: Upload firmware as artifacts
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: firmware-T5-ePaper-S3
+        path: dist/*
+        if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Download firmware
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        path: dist
+        merge-multiple: true
+
+    - name: Resolve version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ steps.version.outputs.value }}
+      run: |
+        cat > notes.md <<'NOTES'
+        ## インストール
+
+        [インストーラのページ](https://mitsuharu.github.io/CardCase-for-LILYGO_Paper/) をパソコンの Chrome か Edge で開き、
+        本体を USB-C で繋いでボタンを押してください。何も用意せずに書き込めます。
+
+        **書き込む前に、ユーザーボタン（IO21）を一度押して本体を起こしてください。**
+        ディープスリープ中はシリアルが USB に現れず、デバイスの一覧に出てきません。
+
+        コマンドで書き込む場合は `T5-ePaper-S3-merged.bin` を使います。
+        ブートローダとパーティションを含んでいるので、offset を指定せずそのまま書き込めます。
+
+        ```bash
+        esptool.py --chip esp32s3 --port /dev/tty.usbmodem1101 write_flash 0x0 T5-ePaper-S3-merged.bin
+        ```
+
+        `T5-ePaper-S3-firmware.bin` はアプリ部分のみで、offset は 0x10000 です。
+
+        繋がらないときは、BOOT を押したまま RST を押して離すとダウンロードモードに入ります。
+
+        ## 対応する基板
+
+        H716（タッチあり）/ H578 / H580（タッチなし）のいずれでも、このバイナリ 1 つで動きます。
+        タッチの有無は起動時に判定します。
+
+        NOTES
+
+        PRERELEASE=""
+        if [ "${{ inputs.prerelease }}" = "true" ]; then
+          PRERELEASE="--prerelease"
+        fi
+
+        # --generate-notes で、前回のリリース以降にマージされた PR が列挙される。
+        # notes.md の内容はその上に置かれる。
+        gh release create "$VERSION" \
+          --title "$VERSION" \
+          --notes-file notes.md \
+          --generate-notes \
+          --target "${{ github.sha }}" \
+          $PRERELEASE \
+          dist/*.bin
+
+  # ブラウザから書き込めるページを GitHub Pages に公開する。
+  # docs/ のページと manifest に、今回ビルドした統合バイナリを並べる。
+  pages:
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Download firmware
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        path: dist
+        merge-multiple: true
+
+    - name: Resolve version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Assemble site
+      env:
+        VERSION: ${{ steps.version.outputs.value }}
+      run: |
+        mkdir -p _site
+        # ページと manifest のバージョンを今回のリリースに差し替える
+        sed "s/%VERSION%/$VERSION/g" docs/index.html > _site/index.html
+        for manifest in docs/manifest-*.json; do
+          sed "s/\"version\": \"0.0.0\"/\"version\": \"$VERSION\"/" "$manifest" > "_site/$(basename "$manifest")"
+        done
+        # ESP Web Tools は manifest からの相対パスで統合バイナリを取りに来る
+        cp dist/*-merged.bin _site/
+        ls -la _site
+
+    - name: Setup Pages
+      uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      with:
+        path: _site
+
+    - name: Deploy to Pages
+      id: deploy
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

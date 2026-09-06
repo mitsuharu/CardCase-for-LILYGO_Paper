@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CardCase for LILYGO Paper インストーラ</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.8;
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+  .lead { color: #666; margin-top: 0; }
+  .version { color: #888; font-size: .85rem; margin: 0 0 1.5rem; }
+  .note {
+    border-left: 4px solid #d0a000;
+    background: rgba(208, 160, 0, 0.08);
+    padding: 0.75rem 1rem;
+    margin: 1.5rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .device {
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .device h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+  .device p { margin: 0 0 0.75rem; color: #666; font-size: 0.9rem; }
+  esp-web-install-button { --esp-tools-button-color: #1257a0; }
+  .unsupported { color: #b00; }
+  ol { padding-left: 1.4rem; }
+  table { border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid rgba(128, 128, 128, 0.35); padding: 0.4rem 0.75rem; text-align: left; }
+  code { background: rgba(128, 128, 128, 0.15); padding: 0.1rem 0.3rem; border-radius: 3px; }
+  footer { margin-top: 3rem; font-size: 0.85rem; color: #888; }
+  a { color: #1257a0; }
+</style>
+</head>
+<body>
+
+<h1>CardCase インストーラ</h1>
+<p class="lead">LILYGO T5 4.7 inch e-Paper に、ブラウザから直接ファームウェアを書き込みます。</p>
+<p class="version" id="version">バージョン <strong>%VERSION%</strong> ・ <a href="https://github.com/mitsuharu/CardCase-for-LILYGO_Paper/releases/tag/%VERSION%">リリースノート</a></p>
+
+<div class="note">
+  <strong>パソコンの Chrome または Edge で開いてください。</strong>
+  書き込みには Web Serial を使うため、iPhone や Android では動作しません。
+</div>
+
+<h2>手順</h2>
+<ol>
+  <li>本体を USB-C でパソコンに繋ぐ</li>
+  <li><strong>ユーザーボタン（IO21）を一度押して本体を起こす</strong></li>
+  <li>下のボタンを押す</li>
+  <li>表示されるダイアログでデバイスを選ぶ</li>
+</ol>
+
+<div class="note">
+  <strong>スリープ中は書き込めません。</strong>
+  シリアルはチップ内蔵の USB-JTAG/CDC なので、ディープスリープに入るとデバイスの一覧から消えます。
+  画像を表示したまま 60 秒放置するとこの状態になります。ボタンを押して起こしてから開き直してください。
+</div>
+
+<div class="device">
+  <h2>LILYGO T5 4.7 inch e-Paper（ESP32-S3）</h2>
+  <p>4.7 インチ / 960 × 540 / 16 階調 ・ H716（タッチあり）と H578 / H580（タッチなし）で共通です</p>
+  <esp-web-install-button manifest="manifest-T5-ePaper-S3.json">
+    <span slot="unsupported" class="unsupported">このブラウザでは書き込めません。パソコンの Chrome か Edge で開いてください。</span>
+  </esp-web-install-button>
+</div>
+
+<div class="note">
+  <strong>ESP32 版（T5 4.7 の旧モデル）には書き込めません。</strong>
+  このファームウェアは ESP32-S3 版のみに対応しています。
+</div>
+
+<h2>基板の 3 つのボタン</h2>
+<table>
+  <tr><th>ボタン</th><th>GPIO</th><th>役割</th></tr>
+  <tr><td>RST</td><td>–</td><td>リセット</td></tr>
+  <tr><td>BOOT</td><td>0</td><td>書き込みモード用。<strong>動作中は押さないでください</strong></td></tr>
+  <tr><td>ユーザーボタン</td><td>21</td><td>このアプリが使うボタン。起こすときもこれ</td></tr>
+</table>
+<p>
+  BOOT (IO0) は e-paper の設定用シフトレジスタ（74HCT4094）の STR ラッチと共用です。
+  動作中に押すと表示が乱れることがあります。
+</p>
+
+<h2>使いかた</h2>
+<p>
+  microSD のルートに jpeg か png を置いて電源を入れると、一覧から選んで全画面に表示できます。
+  画面に収まるよう自動で拡大・縮小し、EXIF の向きにも従います。
+</p>
+<p>
+  SD カードを抜き差ししなくても、スマホから画像を送れます。
+  本体の一覧から <code>[WiFi]</code> を選び、出てきた QR コードをカメラで読むだけです。
+  ブラウザだけで完結するので、アプリは要りません。SD カードが無くても表示できます。
+</p>
+
+<h2>うまくいかないとき</h2>
+<ul>
+  <li>デバイスが一覧に出ない場合は、本体がスリープしています。ユーザーボタン（IO21）を押してから開き直してください。</li>
+  <li>それでも出ない場合は、<strong>BOOT を押したまま RST を押して離す</strong>とダウンロードモードに入ります。書き込み後は RST で再起動してください。</li>
+  <li>書き込み後に一覧が空に見える場合は、SD カードに画像が入っているか確認してください。画面右上に <code>no SD card</code> と出ていれば、SD が読めていません。</li>
+</ul>
+
+<script>
+  // 公開時に置き換わる。置き換わっていなければ（手元で開いた場合など）出さない。
+  (function () {
+    const el = document.getElementById('version');
+    if (el.textContent.indexOf('%') !== -1) { el.style.display = 'none'; }
+  })();
+</script>
+
+<footer>
+  <a href="https://github.com/mitsuharu/CardCase-for-LILYGO_Paper">GitHub リポジトリ</a>
+</footer>
+
+</body>
+</html>

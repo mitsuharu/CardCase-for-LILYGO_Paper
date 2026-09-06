@@ -229,4 +229,73 @@ USB-JTAG/CDC で、スリープ中は列挙されなくなるため。画像を�
 
 ## リリース
 
-未整備。CardCase-For-M5Paper と同じく GitHub Actions で統合バイナリを作る予定。
+`.github/workflows/release.yml` がファームウェアを作り、GitHub Release に添付して、
+ブラウザから書き込めるページを GitHub Pages に公開する。
+
+- **タグ**を打つと走る。タグ名はバージョンそのもの（例: `1.2.3`）
+- Actions の画面から**手動実行**もできる（バージョンを入力する）
+
+成果物は 2 つ。
+
+- `T5-ePaper-S3-merged.bin` … ブートローダ・パーティション・boot_app0・アプリを 1 つに
+  まとめたもの。`write_flash 0x0` だけで書き込める
+- `T5-ePaper-S3-firmware.bin` … アプリ部分のみ（offset は 0x10000）
+
+**ブートローダの位置は 0x0**。ESP32 は 0x1000 だが、このボードは ESP32-S3 なので 0x0。
+参照元（CardCase-For-M5Paper）から `release.yml` を持ってくるときは、そこが機種ごとに
+違うので注意する。
+
+対応する基板は H716 / H578 / H580 の 3 つあるが、タッチの有無は実行時に判定するので
+**成果物は 1 つで足りる**。参照元のような機種ごとの matrix は要らない。
+
+### 一度だけ必要な設定
+
+fork した場合や、リポジトリを作り直した場合は引き継がれないので、一度だけ入れる。
+
+1. **Pages の公開元を GitHub Actions にする**
+
+   ```bash
+   gh api --method POST repos/<owner>/<repo>/pages -f 'build_type=workflow'
+   ```
+
+2. **Pages はタグからのデプロイを許しておく**
+
+   `github-pages` 環境は、既定でデプロイ元を既定ブランチに限る。タグを打つと `pages`
+   だけが `Tag "0.0.5" is not allowed to deploy to github-pages due to environment
+   protection rules.` で落ちる。**Release は作られるのにインストーラのページだけ古いまま**
+   という、気づきにくい形になる。
+
+   ```bash
+   gh api --method POST repos/<owner>/<repo>/environments/github-pages/deployment-branch-policies \
+     -f name='*.*.*' -f type=tag
+   ```
+
+   許可の書式は `*` しか使えず、数字だけに絞れない。
+
+リリースノートは `--generate-notes` で、前回のリリース以降にマージされた PR が
+自動で列挙される。書き込み方法の説明はその上に置かれる。
+
+### ブラウザから書き込めるページ
+
+`docs/` に ESP Web Tools のページと manifest を置いてあり、リリース時に GitHub Pages へ
+公開する。ページと manifest はリポジトリで管理し、統合バイナリだけをその場のビルドから並べる。
+
+**バージョンは公開時に差し替える。** manifest は `version` に `0.0.0` を、ページは
+`%VERSION%` を置いておき、`release.yml` の `pages` ジョブで今回のリリースの値にする。
+ページ側は置き換わっていなければ非表示にするので、手元で開いてもプレースホルダは見えない。
+
+Web Serial を使うのでパソコンの Chrome / Edge 専用。iOS は非対応、Android も未実装。
+
+**ページには「先にユーザーボタンで起こす」ことを必ず書いておく。** スリープ中は
+シリアルが USB に現れず、デバイスの一覧に出てこない。ここでつまずくと原因が分かりにくい。
+
+### Actions の指定はコミットハッシュで固定する
+
+`uses:` はタグではなくコミットハッシュで指定し、読めるようにバージョンをコメントで添える。
+タグは付け替えられるため、供給元が変わると気付けない。
+
+```yaml
+uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+```
+
+更新するときはハッシュとコメントの両方を直す。
